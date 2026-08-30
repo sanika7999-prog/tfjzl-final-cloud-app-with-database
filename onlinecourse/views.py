@@ -1,4 +1,32 @@
-from django.shortcuts import render
+def submit(request, course_id):
+    course = Course.objects.get(id=course_id)
+    user = request.user
+    enrollment = Enrollment.objects.get(user=user, course=course)
+    submission = Submission.objects.create(enrollment=enrollment)
+    answers = extract_answers(request)
+    submission.choices.set(answers)
+    submission.save()
+    return HttpResponseRedirect(f"/onlinecourse/{course_id}/submission/{submission.id}/result/")
+
+def show_exam_result(request, course_id, submission_id):
+    course = Course.objects.get(id=course_id)
+    submission = Submission.objects.get(id=submission_id)
+    selected_ids = submission.choices.all().values_list('id', flat=True)
+    total_score = 0
+    for question in course.question_set.all():
+        if question.is_get_score(selected_ids):
+            total_score += question.grade
+    context = {'course': course, 'grade': total_score, 'submission': submission}
+    return render(request, 'onlinecourse/exam_result_bootstrap.html', context)
+
+def extract_answers(request):
+    submitted_anwsers = []
+    for key in request.POST:
+        if key.startswith('choice'):
+            value = request.POST[key]
+            choice_id = int(value)
+            submitted_anwsers.append(choice_id)
+    return submitted_anwsersfrom django.shortcuts import render
 from django.http import HttpResponseRedirect
 # <HINT> Import any new Models here
 from .models import Course, Enrollment
