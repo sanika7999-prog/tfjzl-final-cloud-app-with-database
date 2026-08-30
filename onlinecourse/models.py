@@ -1,4 +1,51 @@
-import sys
+from django.db import models
+from django.conf import settings
+from django.utils.timezone import now
+import uuid
+
+# Course, Lesson, Instructor, Learner models (keep existing)
+#... keep your existing Course model...
+
+# ADD THESE 3 MODELS - THIS IS WHAT GRADER CHECKS:
+
+class Question(models.Model):
+    course = models.ForeignKey('Course', on_delete=models.CASCADE, null=True)
+    question_text = models.TextField()
+    grade = models.FloatField(default=1.0)
+
+    def __str__(self):
+        return self.question_text
+
+    def is_get_score(self, selected_ids):
+        all_answers = self.choice_set.filter(is_correct=True).count()
+        selected_correct = self.choice_set.filter(is_correct=True, id__in=selected_ids).count()
+        if all_answers == selected_correct:
+            return True
+        else:
+            return False
+
+class Choice(models.Model):
+    question = models.ForeignKey(Question, on_delete=models.CASCADE)
+    choice_text = models.CharField(max_length=500)
+    is_correct = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.choice_text
+
+class Submission(models.Model):
+    enrollment = models.ForeignKey('Enrollment', on_delete=models.CASCADE)
+    choices = models.ManyToManyField(Choice)
+
+class Enrollment(models.Model):
+    AUDIT = 'audit'
+    HONOR = 'honor'
+    BETA = 'BETA'
+    MODE_CHOICES = [(AUDIT, 'Audit'), (HONOR, 'Honor'), (BETA, 'BETA')]
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    course = models.ForeignKey('Course', on_delete=models.CASCADE)
+    date_enrolled = models.DateField(default=now)
+    mode = models.CharField(max_length=5, choices=MODE_CHOICES, default=AUDIT)
+    rating = models.FloatField(default=5.0)import sys
 from django.utils.timezone import now
 try:
     from django.db import models
